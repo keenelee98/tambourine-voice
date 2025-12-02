@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { type AppSettings, type HotkeyConfig, tauriAPI } from "./tauri";
+import { type HotkeyConfig, tauriAPI } from "./tauri";
 
 export function useServerUrl() {
 	return useQuery({
@@ -22,16 +22,6 @@ export function useSettings() {
 		queryKey: ["settings"],
 		queryFn: () => tauriAPI.getSettings(),
 		staleTime: Number.POSITIVE_INFINITY,
-	});
-}
-
-export function useSaveSettings() {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: (settings: AppSettings) => tauriAPI.saveSettings(settings),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["settings"] });
-		},
 	});
 }
 

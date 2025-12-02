@@ -2,8 +2,13 @@
 @import "@pipecat-ai/voice-ui-kit/styles.css";
 
 /* Overlay-specific styles */
-body {
+html,
+body,
+#root {
 	background: transparent;
+}
+
+body {
 	overflow: hidden;
 	margin: 0;
 	padding: 0;

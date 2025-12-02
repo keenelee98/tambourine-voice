@@ -1,3 +1,4 @@
+import { ActionIcon, Button } from "@mantine/core";
 import { useClipboard } from "@mantine/hooks";
 import { Copy, MessageSquare, Trash2 } from "lucide-react";
 import {
@@ -126,14 +127,15 @@ export function HistoryFeed() {
 		<div className="animate-in animate-in-delay-2">
 			<div className="section-header">
 				<span className="section-title">History</span>
-				<button
-					type="button"
-					className="section-action"
+				<Button
+					variant="subtle"
+					size="compact-sm"
+					color="orange"
 					onClick={handleClearAll}
 					disabled={clearHistory.isPending}
 				>
 					Clear All
-				</button>
+				</Button>
 			</div>
 
 			{groupedHistory.map((group) => (
@@ -152,23 +154,25 @@ export function HistoryFeed() {
 								</span>
 								<p className="history-text">{entry.text}</p>
 								<div className="history-actions">
-									<button
-										type="button"
-										className="history-action-btn"
+									<ActionIcon
+										variant="subtle"
+										size="sm"
+										color="gray"
 										onClick={() => clipboard.copy(entry.text)}
 										title="Copy to clipboard"
 									>
 										<Copy size={14} />
-									</button>
-									<button
-										type="button"
-										className="history-action-btn delete"
+									</ActionIcon>
+									<ActionIcon
+										variant="subtle"
+										size="sm"
+										color="red"
 										onClick={() => handleDelete(entry.id)}
 										title="Delete"
 										disabled={deleteEntry.isPending}
 									>
 										<Trash2 size={14} />
-									</button>
+									</ActionIcon>
 								</div>
 							</div>
 						))}

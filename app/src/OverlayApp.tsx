@@ -1,3 +1,4 @@
+import { Loader } from "@mantine/core";
 import { useTimeout } from "@mantine/hooks";
 import { PipecatClient, RTVIEvent } from "@pipecat-ai/client-js";
 import {
@@ -51,8 +52,8 @@ function RecordingControl() {
 			const entry = entries[0];
 			if (!entry) return;
 			const { width, height } = entry.contentRect;
-			// Add small padding for the window
-			tauriAPI.resizeOverlay(Math.ceil(width) + 16, Math.ceil(height) + 16);
+			// Resize window to exactly match content
+			tauriAPI.resizeOverlay(Math.ceil(width), Math.ceil(height));
 		});
 
 		observer.observe(containerRef.current);
@@ -269,9 +270,7 @@ export default function OverlayApp() {
 	if (!client || !devicesReady) {
 		return (
 			<div className="flex items-center justify-center w-full h-full">
-				<div className="bg-black/80 text-white px-4 py-2 rounded-lg text-sm">
-					Initializing...
-				</div>
+				<Loader size="sm" color="white" />
 			</div>
 		);
 	}

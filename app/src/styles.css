@@ -100,42 +100,6 @@ body {
 	padding: 0 12px;
 }
 
-.nav-item {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 16px;
-	margin-bottom: 4px;
-	border-radius: 10px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	color: var(--text-secondary);
-	font-size: 14px;
-	font-weight: 500;
-	border: 1px solid transparent;
-}
-
-.nav-item:hover {
-	background: var(--bg-card);
-	color: var(--text-primary);
-}
-
-.nav-item.active {
-	background: var(--bg-card);
-	color: var(--accent-primary);
-	border-color: var(--border-subtle);
-}
-
-.nav-icon {
-	width: 18px;
-	height: 18px;
-	opacity: 0.8;
-}
-
-.nav-item.active .nav-icon {
-	color: var(--accent-primary);
-}
-
 .sidebar-footer {
 	padding: 16px 20px;
 	border-top: 1px solid var(--border-subtle);
@@ -172,25 +136,6 @@ body {
 
 .main-content::-webkit-scrollbar-thumb:hover {
 	background: var(--text-muted);
-}
-
-/* Page Header */
-.page-header {
-	margin-bottom: 32px;
-}
-
-.page-title {
-	font-family: "Sora", sans-serif;
-	font-size: 28px;
-	font-weight: 600;
-	color: var(--text-primary);
-	letter-spacing: -0.02em;
-	margin-bottom: 4px;
-}
-
-.page-subtitle {
-	font-size: 14px;
-	color: var(--text-secondary);
 }
 
 /* Instructions Card */
@@ -245,23 +190,6 @@ body {
 }
 
 /* Keyboard Shortcuts */
-.kbd {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 28px;
-	height: 26px;
-	padding: 0 8px;
-	background: var(--bg-elevated);
-	border: 1px solid var(--border-default);
-	border-radius: 6px;
-	font-family: "DM Sans", sans-serif;
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--text-primary);
-	box-shadow: 0 2px 0 var(--border-subtle);
-}
-
 .kbd-combo {
 	display: inline-flex;
 	align-items: center;
@@ -288,20 +216,6 @@ body {
 	color: var(--text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-}
-
-.section-action {
-	font-size: 13px;
-	color: var(--accent-primary);
-	cursor: pointer;
-	transition: color 0.2s ease;
-	background: none;
-	border: none;
-	font-family: inherit;
-}
-
-.section-action:hover {
-	color: var(--accent-hover);
 }
 
 /* History Feed */
@@ -362,29 +276,6 @@ body {
 
 .history-item:hover .history-actions {
 	opacity: 1;
-}
-
-.history-action-btn {
-	width: 28px;
-	height: 28px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	border: none;
-	background: transparent;
-	color: var(--text-muted);
-	cursor: pointer;
-	transition: all 0.2s ease;
-}
-
-.history-action-btn:hover {
-	background: var(--bg-elevated);
-	color: var(--text-primary);
-}
-
-.history-action-btn.delete:hover {
-	color: #ef4444;
 }
 
 /* Empty State */
@@ -481,49 +372,10 @@ body {
 	box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.hotkey-display .badge {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: 4px 10px;
-	background: var(--bg-card);
-	border-radius: 6px;
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--text-primary);
-}
-
 .hotkey-hint {
 	font-size: 12px;
 	color: var(--text-muted);
 	margin-left: auto;
-}
-
-/* Note */
-.note {
-	display: flex;
-	align-items: flex-start;
-	gap: 10px;
-	padding: 12px 16px;
-	background: rgba(245, 158, 11, 0.08);
-	border: 1px solid rgba(245, 158, 11, 0.2);
-	border-radius: 10px;
-	font-size: 13px;
-	color: var(--accent-primary);
-}
-
-.note-icon {
-	flex-shrink: 0;
-	margin-top: 1px;
-}
-
-/* Loading State */
-.loading {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 100%;
-	color: var(--text-muted);
 }
 
 /* Animations */

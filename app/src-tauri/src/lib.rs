@@ -64,9 +64,10 @@ pub fn run() {
                 tauri::WebviewUrl::App("overlay.html".into()),
             )
             .title("Voice Overlay")
-            .inner_size(80.0, 80.0)
+            .inner_size(48.0, 48.0)
             .decorations(false)
             .transparent(true)
+            .shadow(false)
             .always_on_top(true)
             .skip_taskbar(true)
             .resizable(false)

@@ -1,4 +1,4 @@
-import { Switch } from "@mantine/core";
+import { Alert, Kbd, NavLink, Switch, Text, Title } from "@mantine/core";
 import { AlertCircle, Home, Mic, Settings } from "lucide-react";
 import { useState } from "react";
 import { DeviceSelector } from "./components/DeviceSelector";
@@ -34,23 +34,42 @@ function Sidebar({
 			</header>
 
 			<nav className="sidebar-nav">
-				<button
-					type="button"
-					className={`nav-item ${activeView === "home" ? "active" : ""}`}
+				<NavLink
+					label="Home"
+					leftSection={<Home size={18} />}
+					active={activeView === "home"}
 					onClick={() => onViewChange("home")}
-				>
-					<Home size={18} className="nav-icon" />
-					<span>Home</span>
-				</button>
-
-				<button
-					type="button"
-					className={`nav-item ${activeView === "settings" ? "active" : ""}`}
+					variant="filled"
+					styles={{
+						root: {
+							borderRadius: 8,
+							"&[data-active]": {
+								backgroundColor: "var(--bg-elevated)",
+							},
+						},
+						label: {
+							color: "var(--text-primary)",
+						},
+					}}
+				/>
+				<NavLink
+					label="Settings"
+					leftSection={<Settings size={18} />}
+					active={activeView === "settings"}
 					onClick={() => onViewChange("settings")}
-				>
-					<Settings size={18} className="nav-icon" />
-					<span>Settings</span>
-				</button>
+					variant="filled"
+					styles={{
+						root: {
+							borderRadius: 8,
+							"&[data-active]": {
+								backgroundColor: "var(--bg-elevated)",
+							},
+						},
+						label: {
+							color: "var(--text-primary)",
+						},
+					}}
+				/>
 			</nav>
 
 			<footer className="sidebar-footer">
@@ -85,7 +104,7 @@ function InstructionsCard() {
 				<span className="kbd-combo">
 					{hotkeyParts.map((part, index) => (
 						<span key={part}>
-							<span className="kbd">{part}</span>
+							<Kbd>{part}</Kbd>
 							{index < hotkeyParts.length - 1 && (
 								<span className="kbd-plus">+</span>
 							)}
@@ -110,9 +129,13 @@ function InstructionsCard() {
 function HomeView() {
 	return (
 		<div className="main-content">
-			<header className="page-header animate-in">
-				<h1 className="page-title">Welcome back</h1>
-				<p className="page-subtitle">Your voice dictation history</p>
+			<header className="animate-in" style={{ marginBottom: 32 }}>
+				<Title order={1} mb={4}>
+					Welcome back
+				</Title>
+				<Text c="dimmed" size="sm">
+					Your voice dictation history
+				</Text>
 			</header>
 
 			<InstructionsCard />
@@ -152,11 +175,13 @@ function SettingsView() {
 
 	return (
 		<div className="main-content">
-			<header className="page-header animate-in">
-				<h1 className="page-title">Settings</h1>
-				<p className="page-subtitle">
+			<header className="animate-in" style={{ marginBottom: 32 }}>
+				<Title order={1} mb={4}>
+					Settings
+				</Title>
+				<Text c="dimmed" size="sm">
 					Configure your voice dictation preferences
-				</p>
+				</Text>
 			</header>
 
 			<div className="settings-section animate-in animate-in-delay-1">
@@ -205,10 +230,14 @@ function SettingsView() {
 					</div>
 				</div>
 
-				<div className="note" style={{ marginTop: 16 }}>
-					<AlertCircle size={16} className="note-icon" />
-					<span>Hotkey changes require app restart to take effect.</span>
-				</div>
+				<Alert
+					icon={<AlertCircle size={16} />}
+					color="orange"
+					variant="light"
+					mt="md"
+				>
+					Hotkey changes require app restart to take effect.
+				</Alert>
 			</div>
 		</div>
 	);

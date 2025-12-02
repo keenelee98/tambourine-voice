@@ -1,3 +1,4 @@
+import { Kbd } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useCallback } from "react";
 import type { HotkeyConfig } from "../lib/tauri";
@@ -102,9 +103,7 @@ export function HotkeyInput({
 				) : (
 					<>
 						{value.modifiers.concat([value.key]).map((part) => (
-							<span key={part} className="badge">
-								{formatKey(part)}
-							</span>
+							<Kbd key={part}>{formatKey(part)}</Kbd>
 						))}
 						<span className="hotkey-hint">Click to change</span>
 					</>

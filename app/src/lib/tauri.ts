@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-export interface TypeTextResult {
+interface TypeTextResult {
 	success: boolean;
 	error?: string;
 }
@@ -11,17 +11,17 @@ export interface HotkeyConfig {
 	key: string;
 }
 
-export interface AppSettings {
+interface HistoryEntry {
+	id: string;
+	timestamp: string;
+	text: string;
+}
+
+interface AppSettings {
 	toggle_hotkey: HotkeyConfig;
 	hold_hotkey: HotkeyConfig;
 	selected_mic_id: string | null;
 	sound_enabled: boolean;
-}
-
-export interface HistoryEntry {
-	id: string;
-	timestamp: string;
-	text: string;
 }
 
 export const tauriAPI = {
