@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Voice Dictation Server - WebSocket-based Pipecat Server.
+"""Tambourine Server - WebSocket-based Pipecat Server.
 
 A WebSocket server that receives audio from a Tauri client,
 processes it through STT and LLM cleanup, and returns cleaned text.
 
 Usage:
-    python dictation_server.py
-    python dictation_server.py --port 8765
+    python main.py
+    python main.py --port 8765
 """
 
 import asyncio
@@ -53,7 +53,7 @@ from services.providers import (
 from utils.logger import configure_logging
 
 # CLI app
-app = typer.Typer(help="Voice dictation WebSocket server")
+app = typer.Typer(help="Tambourine WebSocket server")
 
 
 class DebugFrameProcessor(FrameProcessor):
@@ -278,7 +278,7 @@ async def run_server(host: str, port: int, settings: Settings) -> None:
     api_server = uvicorn.Server(uvicorn_config)
 
     logger.info("=" * 60)
-    logger.success("Voice Dictation Server Ready!")
+    logger.success("Tambourine Server Ready!")
     logger.info("=" * 60)
     logger.info(f"WebSocket endpoint: ws://{host}:{port}")
     logger.info(f"Config API endpoint: http://{host}:{api_port}")
@@ -320,7 +320,7 @@ def main(
         help="Enable verbose logging",
     ),
 ) -> None:
-    """Start the voice dictation WebSocket server.
+    """Start the Tambourine WebSocket server.
 
     Examples:
         dictation-server

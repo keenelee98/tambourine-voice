@@ -1,4 +1,4 @@
-"""Configuration management for voice dictation server using Pydantic Settings."""
+"""Configuration management for Tambourine server using Pydantic Settings."""
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict

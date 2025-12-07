@@ -1,5 +1,5 @@
 [project]
-name = "voice-dictation"
+name = "tambourine-voice"
 version = "0.1.0"
 description = "Customizable AI-powered voice dictation tool"
 license = "AGPL-3.0"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dictation-server = "dictation_server:app"
+tambourine-voice-server = "main:app"
 
 [dependency-groups]
 dev = ["ruff>=0.14.3", "ty<=0.0.1a25"]

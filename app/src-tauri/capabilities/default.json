@@ -1,7 +1,7 @@
 {
 	"$schema": "../gen/schemas/desktop-schema.json",
 	"identifier": "default",
-	"description": "Default capabilities for voice dictation",
+	"description": "Default capabilities for Tambourine",
 	"windows": ["main", "overlay"],
 	"permissions": [
 		"core:default",

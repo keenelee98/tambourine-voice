@@ -193,7 +193,7 @@ function HomeView() {
 					Welcome back
 				</Title>
 				<Text c="dimmed" size="sm">
-					Your voice dictation history
+					Your Tambourine history
 				</Text>
 			</header>
 
@@ -339,7 +339,7 @@ function SettingsView() {
 					Settings
 				</Title>
 				<Text c="dimmed" size="sm">
-					Configure your voice dictation preferences
+					Configure your Tambourine preferences
 				</Text>
 			</header>
 

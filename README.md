@@ -1,8 +1,8 @@
-# Voice Dictation
+# Tambourine
 
-Customizable AI powered voice dictation tool. Open-source alternative to [Wispr Flow](https://wisprflow.ai) and [SuperWhisper](https://superwhisper.com). Speak and your words are typed wherever your cursor is.
+Customizable AI powered voice dictation tool. Open-source alternative to [Wispr Flow](https://wisprflow.ai) and [Superwhisper](https://superwhisper.com). Speak and your words are typed wherever your cursor is.
 
-## Why Voice Dictation?
+## Why Tambourine?
 
 Unlike proprietary voice dictation tools, this project gives you full control:
 
@@ -82,7 +82,7 @@ vim .env
 uv sync
 
 # Start the server
-uv run python dictation_server.py
+uv run python main.py
 ```
 
 ### 3. Set Up the App
@@ -99,60 +99,12 @@ pnpm dev
 
 ### 4. Use It
 
-1. Start the server first (`uv run python dictation_server.py`)
+1. Start the server first (`uv run python main.py`)
 2. Start the app (`pnpm dev`)
 3. Use either shortcut:
    - **Toggle**: Press `Ctrl+Alt+Space` to start, press again to stop
    - **Hold**: Hold `Ctrl+Alt+.` while speaking, release to stop
 4. Your cleaned text is typed at your cursor
-
-## Project Structure
-
-```
-voice-dictation/
-├── server/                     # Python dictation server
-│   ├── dictation_server.py     # WebSocket server entry point
-│   ├── api/
-│   │   └── config_server.py    # HTTP API for client config
-│   ├── config/
-│   │   └── settings.py         # Pydantic settings configuration
-│   ├── processors/
-│   │   ├── llm_cleanup.py      # LLM text cleanup processor
-│   │   └── transcription_buffer.py
-│   ├── services/
-│   │   └── providers.py        # STT and LLM provider services
-│   ├── utils/
-│   │   └── logger.py
-│   ├── pyproject.toml
-│   └── .env.example
-├── app/                        # Tauri desktop app
-│   ├── src/                    # React frontend
-│   │   ├── App.tsx             # Main app window
-│   │   ├── OverlayApp.tsx      # Recording overlay
-│   │   ├── components/
-│   │   │   ├── DeviceSelector.tsx
-│   │   │   ├── HistoryFeed.tsx
-│   │   │   └── HotkeyInput.tsx
-│   │   ├── stores/
-│   │   │   └── recordingStore.ts
-│   │   └── lib/
-│   │       ├── tauri.ts        # Tauri API wrapper
-│   │       └── queries.ts      # React Query hooks
-│   ├── src-tauri/              # Rust backend
-│   │   ├── src/
-│   │   │   ├── lib.rs          # Main setup, shortcuts, tray
-│   │   │   ├── settings.rs     # User settings management
-│   │   │   ├── audio.rs        # Audio device handling
-│   │   │   ├── history.rs      # Transcription history
-│   │   │   ├── state.rs        # App state
-│   │   │   └── commands/
-│   │   │       └── text.rs     # type_text command
-│   │   ├── Cargo.toml
-│   │   └── tauri.conf.json
-│   ├── package.json
-│   └── vite.config.ts
-└── README.md
-```
 
 ## Server Commands
 
@@ -160,13 +112,13 @@ voice-dictation/
 cd server
 
 # Start server (default: localhost:8765)
-uv run python dictation_server.py
+uv run python main.py
 
 # Start with custom host/port
-uv run python dictation_server.py --host 0.0.0.0 --port 9000
+uv run python main.py --host 0.0.0.0 --port 9000
 
 # Enable verbose logging
-uv run python dictation_server.py --verbose
+uv run python main.py --verbose
 ```
 
 ## App Commands
@@ -191,31 +143,31 @@ pnpm build         # Build for current platform
 
 **STT Providers** (at least one required):
 
-| Variable              | Description                | Default |
-| --------------------- | -------------------------- | ------- |
-| `CARTESIA_API_KEY`    | Cartesia API key for STT   | —       |
-| `ASSEMBLYAI_API_KEY`  | AssemblyAI API key for STT | —       |
-| `DEEPGRAM_API_KEY`    | Deepgram API key for STT   | —       |
+| Variable             | Description                | Default |
+| -------------------- | -------------------------- | ------- |
+| `CARTESIA_API_KEY`   | Cartesia API key for STT   | —       |
+| `ASSEMBLYAI_API_KEY` | AssemblyAI API key for STT | —       |
+| `DEEPGRAM_API_KEY`   | Deepgram API key for STT   | —       |
 
 **LLM Providers** (at least one required):
 
-| Variable            | Description                  | Default |
-| ------------------- | ---------------------------- | ------- |
-| `CEREBRAS_API_KEY`  | Cerebras API key for LLM     | —       |
-| `OPENAI_API_KEY`    | OpenAI API key for LLM       | —       |
-| `GOOGLE_API_KEY`    | Google Gemini API key        | —       |
-| `ANTHROPIC_API_KEY` | Anthropic API key for LLM    | —       |
-| `GROQ_API_KEY`      | Groq API key for LLM         | —       |
+| Variable            | Description               | Default |
+| ------------------- | ------------------------- | ------- |
+| `CEREBRAS_API_KEY`  | Cerebras API key for LLM  | —       |
+| `OPENAI_API_KEY`    | OpenAI API key for LLM    | —       |
+| `GOOGLE_API_KEY`    | Google Gemini API key     | —       |
+| `ANTHROPIC_API_KEY` | Anthropic API key for LLM | —       |
+| `GROQ_API_KEY`      | Groq API key for LLM      | —       |
 
 **Server Settings**:
 
-| Variable                 | Description               | Default     |
-| ------------------------ | ------------------------- | ----------- |
-| `DEFAULT_STT_PROVIDER`   | Default STT provider      | `cartesia`  |
-| `DEFAULT_LLM_PROVIDER`   | Default LLM provider      | `cerebras`  |
-| `DICTATION_SERVER_HOST`  | WebSocket server host     | `127.0.0.1` |
-| `DICTATION_SERVER_PORT`  | WebSocket server port     | `8765`      |
-| `LOG_LEVEL`              | Logging level             | `INFO`      |
+| Variable                | Description           | Default     |
+| ----------------------- | --------------------- | ----------- |
+| `DEFAULT_STT_PROVIDER`  | Default STT provider  | `cartesia`  |
+| `DEFAULT_LLM_PROVIDER`  | Default LLM provider  | `cerebras`  |
+| `DICTATION_SERVER_HOST` | WebSocket server host | `127.0.0.1` |
+| `DICTATION_SERVER_PORT` | WebSocket server port | `8765`      |
+| `LOG_LEVEL`             | Logging level         | `INFO`      |
 
 ### App Configuration
 

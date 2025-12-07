@@ -1,4 +1,4 @@
-"""FastAPI configuration server for voice dictation settings."""
+"""FastAPI configuration server for Tambourine settings."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from config.settings import Settings
     from processors.llm_cleanup import TranscriptionToLLMConverter
 
-app = FastAPI(title="Voice Dictation Config API")
+app = FastAPI(title="Tambourine Config API")
 
 # CORS for Tauri frontend
 app.add_middleware(
