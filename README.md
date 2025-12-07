@@ -6,7 +6,7 @@ Customizable AI powered voice dictation tool. Open-source alternative to [Wispr 
 
 Unlike proprietary voice dictation tools, this project gives you full control:
 
-- **Swap AI providers** — Use any STT (Cartesia, Deepgram, Whisper) or LLM (Cerebras, OpenAI, local models)
+- **Swap AI providers** — Use any STT (Cartesia, Deepgram, AssemblyAI) or LLM (Cerebras, OpenAI, Anthropic, Google, Groq)
 - **Customize processing** — Modify prompts, add custom processors, or chain multiple LLMs
 - **Extensible** — Built on [Pipecat](https://github.com/pipecat-ai/pipecat)'s modular pipeline framework
 
@@ -14,11 +14,14 @@ Unlike proprietary voice dictation tools, this project gives you full control:
 
 - **Dual-Mode Recording**
   - Hold-to-record: `Ctrl+Alt+.` - Hold to record, release to stop
-  - Start and stop: `Ctrl+Alt+Space` - Press to start, press again to stop
-- **Real-time Speech-to-Text** - Fast transcription with Cartesia Ink-Whisper
-- **LLM Text Cleanup** - Removes filler words, fixes grammar using Cerebras
+  - Toggle mode: `Ctrl+Alt+Space` - Press to start, press again to stop
+- **Real-time Speech-to-Text** - Fast transcription with configurable STT providers
+- **LLM Text Cleanup** - Removes filler words, fixes grammar using configurable LLM
 - **Automatic Text Typing** - Pastes cleaned text at cursor position
 - **System Tray Integration** - Click to show/hide, right-click menu
+- **Transcription History** - View and copy previous dictations
+- **Customizable Hotkeys** - Configure shortcuts to your preference
+- **Device Selection** - Choose your preferred microphone
 
 ## Architecture
 
@@ -35,8 +38,8 @@ Unlike proprietary voice dictation tools, this project gives you full control:
 ┌─────────────────────────────────────────────────────────────┐
 │                  Dictation Server (server/)                  │
 │  - Pipecat pipeline for audio processing                    │
-│  - Cartesia STT (speech-to-text)                            │
-│  - Cerebras LLM (text cleanup)                              │
+│  - Configurable STT (Cartesia, Deepgram, AssemblyAI)        │
+│  - Configurable LLM (Cerebras, OpenAI, Anthropic, etc.)     │
 │  - Returns cleaned text to client                           │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -46,7 +49,7 @@ Unlike proprietary voice dictation tools, this project gives you full control:
 - Rust (for Tauri)
 - Node.js 18+
 - pnpm
-- Python 3.10+
+- Python 3.13+
 - uv (Python package manager)
 
 ### Linux Dependencies
@@ -109,27 +112,38 @@ pnpm dev
 voice-dictation/
 ├── server/                     # Python dictation server
 │   ├── dictation_server.py     # WebSocket server entry point
+│   ├── api/
+│   │   └── config_server.py    # HTTP API for client config
 │   ├── config/
 │   │   └── settings.py         # Pydantic settings configuration
 │   ├── processors/
 │   │   ├── llm_cleanup.py      # LLM text cleanup processor
 │   │   └── transcription_buffer.py
 │   ├── services/
-│   │   ├── llm_service.py      # Cerebras LLM service
-│   │   └── stt_service.py      # Cartesia STT service
+│   │   └── providers.py        # STT and LLM provider services
 │   ├── utils/
 │   │   └── logger.py
 │   ├── pyproject.toml
 │   └── .env.example
 ├── app/                        # Tauri desktop app
 │   ├── src/                    # React frontend
-│   │   ├── App.tsx
-│   │   ├── OverlayApp.tsx
+│   │   ├── App.tsx             # Main app window
+│   │   ├── OverlayApp.tsx      # Recording overlay
+│   │   ├── components/
+│   │   │   ├── DeviceSelector.tsx
+│   │   │   ├── HistoryFeed.tsx
+│   │   │   └── HotkeyInput.tsx
+│   │   ├── stores/
+│   │   │   └── recordingStore.ts
 │   │   └── lib/
-│   │       └── tauri.ts        # Tauri API wrapper
+│   │       ├── tauri.ts        # Tauri API wrapper
+│   │       └── queries.ts      # React Query hooks
 │   ├── src-tauri/              # Rust backend
 │   │   ├── src/
 │   │   │   ├── lib.rs          # Main setup, shortcuts, tray
+│   │   │   ├── settings.rs     # User settings management
+│   │   │   ├── audio.rs        # Audio device handling
+│   │   │   ├── history.rs      # Transcription history
 │   │   │   ├── state.rs        # App state
 │   │   │   └── commands/
 │   │   │       └── text.rs     # type_text command
@@ -175,20 +189,42 @@ pnpm build         # Build for current platform
 
 ### Server Configuration (.env)
 
-| Variable           | Description              | Default  |
-| ------------------ | ------------------------ | -------- |
-| `CARTESIA_API_KEY` | Cartesia API key for STT | Required |
-| `CEREBRAS_API_KEY` | Cerebras API key for LLM | Required |
-| `LOG_LEVEL`        | Logging level            | `INFO`   |
+**STT Providers** (at least one required):
+
+| Variable              | Description                | Default |
+| --------------------- | -------------------------- | ------- |
+| `CARTESIA_API_KEY`    | Cartesia API key for STT   | —       |
+| `ASSEMBLYAI_API_KEY`  | AssemblyAI API key for STT | —       |
+| `DEEPGRAM_API_KEY`    | Deepgram API key for STT   | —       |
+
+**LLM Providers** (at least one required):
+
+| Variable            | Description                  | Default |
+| ------------------- | ---------------------------- | ------- |
+| `CEREBRAS_API_KEY`  | Cerebras API key for LLM     | —       |
+| `OPENAI_API_KEY`    | OpenAI API key for LLM       | —       |
+| `GOOGLE_API_KEY`    | Google Gemini API key        | —       |
+| `ANTHROPIC_API_KEY` | Anthropic API key for LLM    | —       |
+| `GROQ_API_KEY`      | Groq API key for LLM         | —       |
+
+**Server Settings**:
+
+| Variable                 | Description               | Default     |
+| ------------------------ | ------------------------- | ----------- |
+| `DEFAULT_STT_PROVIDER`   | Default STT provider      | `cartesia`  |
+| `DEFAULT_LLM_PROVIDER`   | Default LLM provider      | `cerebras`  |
+| `DICTATION_SERVER_HOST`  | WebSocket server host     | `127.0.0.1` |
+| `DICTATION_SERVER_PORT`  | WebSocket server port     | `8765`      |
+| `LOG_LEVEL`              | Logging level             | `INFO`      |
 
 ### App Configuration
 
-The app connects to `ws://localhost:8765` by default. The server URL is configured in `src-tauri/src/commands/text.rs`.
+The app connects to `ws://localhost:8765` by default.
 
 ## Technology Stack
 
-- **App**: Tauri v2, Rust, React, TypeScript, Tailwind CSS
-- **Server**: Python, Pipecat, Cartesia (STT), Cerebras (LLM)
+- **App**: Tauri v2, Rust, React 19, TypeScript, Tailwind CSS, Mantine
+- **Server**: Python 3.13, Pipecat, FastAPI
 - **Communication**: WebSocket with Protobuf serialization
 
 ## Acknowledgments
