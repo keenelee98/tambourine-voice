@@ -17,6 +17,9 @@ Open-source alternative to [Wispr Flow](https://wisprflow.ai) and [Superwhisper]
 > ⚠️ **Build in Progress**
 > This project is under active development. Core features work well, but expect breaking changes to the code, architecture, and configuration as the project evolves.
 
+> 🚀 **Hosted Service Coming Soon!**
+> [Join the waitlist](https://docs.google.com/forms/d/e/1FAIpQLSf6JfLheFlBU-jAVMzgA7CKCcFb39fGZOaizKjxSBMCwSrVZg/viewform) to use Tambourine without running the server yourself.
+
 <p align="center">
   <img src="assets/home.png" alt="Home" width="600">
 </p>

@@ -4,20 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tambourine - Build Your Own Voice Interface</title>
+    <title>Tambourine - Your Personal Voice Interface Into Any App</title>
     <meta name="description"
         content="An open-source platform for AI voice dictation that you can customize and personalize to your exact needs.">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Tambourine - Build Your Own Voice Interface">
+    <meta property="og:title" content="Tambourine - Your Personal Voice Interface Into Any App">
     <meta property="og:description"
         content="An open-source platform for AI voice dictation that you can customize and personalize to your exact needs.">
     <meta property="og:image" content="./assets/windows_notepad.gif">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Tambourine - Build Your Own Voice Interface">
+    <meta name="twitter:title" content="Tambourine - Your Personal Voice Interface Into Any App">
     <meta name="twitter:description"
         content="An open-source platform for AI voice dictation that you can customize and personalize to your exact needs.">
 
@@ -828,6 +828,91 @@
                 flex-direction: column;
             }
         }
+
+        /* Get Started section */
+        .get-started {
+            background: var(--bg-elevated);
+            border-top: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .get-started-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 640px) {
+            .get-started-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .get-started-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.25s ease;
+        }
+
+        .get-started-card:hover {
+            border-color: var(--border-default);
+            transform: translateY(-4px);
+        }
+
+        .get-started-card .card-icon {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-dim);
+            border-radius: 14px;
+            margin: 0 auto 20px;
+            color: var(--text-primary);
+        }
+
+        .get-started-card .card-icon .lucide {
+            width: 28px;
+            height: 28px;
+        }
+
+        .get-started-card h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 22px;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+
+        .get-started-card .card-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--accent-dim);
+            border-radius: 100px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .get-started-card p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .get-started-card .btn {
+            width: 100%;
+            justify-content: center;
+        }
     </style>
 </head>
 
@@ -854,8 +939,7 @@
                     <i data-lucide="github"></i>
                     GitHub
                 </a>
-                <a href="https://github.com/kstonekuan/tambourine-voice" class="nav-link primary" target="_blank"
-                    rel="noopener">
+                <a href="#get-started" class="nav-link primary">
                     Get Started
                 </a>
             </div>
@@ -871,12 +955,11 @@
         </svg>
         <div class="container hero-content">
             <div class="hero-badge">Open Source Voice Dictation Platform</div>
-            <h1><span>Build Your Own Voice Interface</span></h1>
+            <h1><span>Your Personal Voice Interface Into Any App</span></h1>
             <p class="hero-subtitle">An open-source platform for AI voice dictation that you can customize and
                 personalize to your exact needs. Choose your models, write your prompts, make it yours.</p>
             <div class="hero-ctas">
-                <a href="https://github.com/kstonekuan/tambourine-voice" class="btn btn-primary" target="_blank"
-                    rel="noopener">
+                <a href="#get-started" class="btn btn-primary">
                     Get Started
                 </a>
                 <a href="https://github.com/kstonekuan/tambourine-voice" class="btn btn-secondary" target="_blank"
@@ -1036,6 +1119,46 @@
                 <div class="future-card">
                     <h3>Voice Shortcuts</h3>
                     <p>Create custom triggers like "insert meeting link" that expand to frequently used text.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Get Started Section -->
+    <section class="get-started" id="get-started">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Get Started</div>
+                <h2 class="section-title">Choose How to Run Tambourine</h2>
+                <p class="section-subtitle">Run it yourself for free, or let us handle the infrastructure.</p>
+            </div>
+            <div class="get-started-grid">
+                <div class="get-started-card">
+                    <div class="card-icon">
+                        <i data-lucide="server"></i>
+                    </div>
+                    <span class="card-badge">Available Now</span>
+                    <h3>Self-Host</h3>
+                    <p>Run the open source code yourself. Full control, completely free, requires some setup.</p>
+                    <a href="https://github.com/kstonekuan/tambourine-voice" class="btn btn-primary" target="_blank"
+                        rel="noopener">
+                        <i data-lucide="github"></i>
+                        View on GitHub
+                    </a>
+                </div>
+                <div class="get-started-card">
+                    <div class="card-icon">
+                        <i data-lucide="cloud"></i>
+                    </div>
+                    <span class="card-badge">Coming Soon</span>
+                    <h3>Hosted Service</h3>
+                    <p>We run the infrastructure for you. No setup, no fuss, just download and start dictating.
+                    </p>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSf6JfLheFlBU-jAVMzgA7CKCcFb39fGZOaizKjxSBMCwSrVZg/viewform"
+                        class="btn btn-secondary" target="_blank" rel="noopener">
+                        <i data-lucide="clipboard-list"></i>
+                        Join Waitlist
+                    </a>
                 </div>
             </div>
         </div>
