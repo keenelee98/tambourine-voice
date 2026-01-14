@@ -196,8 +196,13 @@ function RecordingControl() {
 
 	// Handle start/stop recording from hotkeys
 	const onStartRecording = useCallback(async () => {
+		// Apply selected mic from settings before starting recording
+		// This ensures the user's preferred mic is used, even on first recording
+		if (client && settings?.selected_mic_id) {
+			await client.updateMic(settings.selected_mic_id);
+		}
 		await startRecording();
-	}, [startRecording]);
+	}, [client, settings?.selected_mic_id, startRecording]);
 
 	const onStopRecording = useCallback(() => {
 		if (stopRecording()) {
@@ -640,7 +645,6 @@ function RecordingControl() {
 export default function OverlayApp() {
 	const [client, setClient] = useState<PipecatClient | null>(null);
 	const [devicesReady, setDevicesReady] = useState(false);
-	const { data: settings } = useSettings();
 
 	// Initial client creation on mount
 	useEffect(() => {
@@ -657,6 +661,16 @@ export default function OverlayApp() {
 		pipecatClient
 			.initDevices()
 			.then(() => {
+				// Stop the audio track to release the microphone
+				// initDevices() acquires the mic to enumerate devices, but we don't need it active until recording starts
+				try {
+					const tracks = pipecatClient.tracks();
+					if (tracks?.local?.audio) {
+						tracks.local.audio.stop();
+					}
+				} catch (error) {
+					console.warn("[Pipecat] Failed to stop initial audio track:", error);
+				}
 				setDevicesReady(true);
 			})
 			.catch((error: unknown) => {
@@ -668,13 +682,6 @@ export default function OverlayApp() {
 			pipecatClient.disconnect().catch(() => {});
 		};
 	}, []);
-
-	// Apply selected microphone when settings or client changes
-	useEffect(() => {
-		if (client && devicesReady && settings?.selected_mic_id) {
-			client.updateMic(settings.selected_mic_id);
-		}
-	}, [client, devicesReady, settings?.selected_mic_id]);
 
 	if (!client || !devicesReady) {
 		return (
