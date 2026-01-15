@@ -42,8 +42,8 @@ from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from api.config_server import config_router
 from config.settings import Settings
 from processors.configuration import ConfigurationHandler
-from processors.llm import TranscriptionToLLMConverter
-from processors.transcription_buffer import TranscriptionBufferProcessor
+from processors.context_manager import DictationContextManager
+from processors.turn_controller import TurnController
 from services.providers import (
     create_all_available_llm_services,
     create_all_available_stt_services,
@@ -168,8 +168,11 @@ async def run_pipeline(
     )
 
     # Initialize processors
-    transcription_to_llm = TranscriptionToLLMConverter()
-    transcription_buffer = TranscriptionBufferProcessor()
+    # DictationContextManager wraps LLMContextAggregatorPair with dictation-specific features
+    context_manager = DictationContextManager()
+    turn_controller = TurnController()
+    # Wire up turn controller to context manager for context reset coordination
+    turn_controller.set_context_manager(context_manager)
 
     # RTVIProcessor handles the RTVI protocol (client messages, server responses)
     rtvi_processor = RTVIProcessor()
@@ -179,8 +182,8 @@ async def run_pipeline(
         rtvi_processor=rtvi_processor,
         stt_switcher=stt_switcher,
         llm_switcher=llm_switcher,
-        llm_converter=transcription_to_llm,
-        transcription_buffer=transcription_buffer,
+        context_manager=context_manager,
+        turn_controller=turn_controller,
         stt_services=stt_services,
         llm_services=llm_services,
     )
@@ -199,24 +202,26 @@ async def run_pipeline(
 
         # Handle recording control messages
         if msg_type == "start-recording":
-            await transcription_buffer.start_recording()
+            await turn_controller.start_recording()
             return
         if msg_type == "stop-recording":
-            await transcription_buffer.stop_recording()
+            await turn_controller.stop_recording()
             return
 
         # Handle configuration messages
         await config_handler.handle_client_message(msg_type, data)
 
     # Build pipeline - RTVIProcessor at the start handles RTVI protocol
+    # The aggregator pair from context_manager collects transcriptions and LLM responses
     pipeline = Pipeline(
         [
             transport.input(),
             rtvi_processor,  # Handles RTVI protocol messages
             stt_switcher,
-            transcription_buffer,
-            transcription_to_llm,
+            turn_controller,  # Controls turn boundaries, passes transcriptions through
+            context_manager.user_aggregator(),  # Collects transcriptions, emits LLMContextFrame
             llm_switcher,
+            context_manager.assistant_aggregator(),  # Collects LLM responses
             transport.output(),
         ]
     )

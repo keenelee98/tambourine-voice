@@ -1,31 +1,44 @@
-"""Transcription buffer processor for dictation.
+"""Turn controller for dictation recording lifecycle.
 
-Buffers transcription text until the user explicitly stops recording,
-then emits a single consolidated transcription for LLM formatting.
+Controls turn boundaries and coordinates timing between:
+- NVIDIA STT service (via NVidiaSTTFinalizeFrame upstream for manual stop)
+- LLMUserAggregator (via UserStartedSpeakingFrame/UserStoppedSpeakingFrame)
+
+Does NOT buffer transcriptions - the LLMUserAggregator handles that.
+This processor manages:
+- Recording start/stop from RTVI client
+- STT finalization signaling
+- Draining timeout for late transcriptions
+- Empty recording detection
 
 Uses a state machine pattern with tagged unions for explicit state management:
 - IdleState: Not recording
-- RecordingState: Actively buffering transcriptions
+- RecordingState: Actively recording, transcriptions pass through
 - WaitingForSTTState: Stop received, waiting for STT to catch up
+- DrainingState: Speech stopped, draining late transcriptions
 """
 
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from pipecat.frames.frames import (
     Frame,
     TranscriptionFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
     VADUserStoppedSpeakingFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
-from pipecat.transcriptions.language import Language
 
+from frames import NVidiaSTTFinalizeFrame
 from utils.logger import logger
+
+if TYPE_CHECKING:
+    from processors.context_manager import DictationContextManager
 
 # Default timeout for waiting for STT transcriptions (can be overridden at runtime)
 DEFAULT_TRANSCRIPTION_WAIT_TIMEOUT_SECONDS: Final[float] = 0.5
@@ -45,25 +58,21 @@ class IdleState:
 
 @dataclass(frozen=True)
 class RecordingState:
-    """Actively recording and buffering transcriptions."""
+    """Actively recording. Transcriptions pass through to aggregator."""
 
-    buffer: str = ""
-    user_id: str = "user"
-    language: Language | None = None
+    has_content: bool = False
 
 
 @dataclass(frozen=True)
 class WaitingForSTTState:
     """Stop-recording received, waiting for VAD to signal speech has stopped.
 
-    This state is entered when speech was detected when stop-recording arrives.
-    We wait for UserStoppedSpeakingFrame from VAD to ensure all pending STT
-    transcriptions have been delivered before emitting the final buffer.
+    This state is entered when stop-recording arrives. We wait for
+    VADUserStoppedSpeakingFrame to ensure all pending STT transcriptions
+    have been delivered before signaling turn end.
     """
 
-    buffer: str
-    user_id: str
-    language: Language | None
+    has_content: bool
     direction: FrameDirection
 
 
@@ -71,15 +80,13 @@ class WaitingForSTTState:
 class DrainingState:
     """Speech stopped, draining any remaining transcriptions from STT.
 
-    This state is entered after UserStoppedSpeakingFrame is received while
+    This state is entered after VADUserStoppedSpeakingFrame is received while
     in WaitingForSTTState. We wait briefly for late-arriving transcriptions
-    before emitting the final buffer. Uses an adaptive timeout that resets
-    when transcriptions arrive.
+    before signaling turn end. Uses an adaptive timeout that resets when
+    transcriptions arrive.
     """
 
-    buffer: str
-    user_id: str
-    language: Language | None
+    has_content: bool
     direction: FrameDirection
 
 
@@ -88,12 +95,12 @@ State = IdleState | RecordingState | WaitingForSTTState | DrainingState
 
 
 # =============================================================================
-# Processor
+# Turn Controller
 # =============================================================================
 
 
-class TranscriptionBufferProcessor(FrameProcessor):
-    """Buffers transcriptions until user stops recording.
+class TurnController(FrameProcessor):
+    """Controls turn boundaries for dictation recording.
 
     Uses a state machine to manage the recording lifecycle explicitly.
     State transitions are handled via pattern matching, making invalid
@@ -101,7 +108,7 @@ class TranscriptionBufferProcessor(FrameProcessor):
     """
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initialize the transcription buffer processor."""
+        """Initialize the turn controller."""
         super().__init__(**kwargs)
         self._state: State = IdleState()
         self._timeout_task: asyncio.Task[None] | None = None
@@ -109,6 +116,16 @@ class TranscriptionBufferProcessor(FrameProcessor):
         self._draining_event: asyncio.Event = asyncio.Event()
         # Configurable timeout for waiting for STT transcriptions (can be updated at runtime)
         self._transcription_wait_timeout = DEFAULT_TRANSCRIPTION_WAIT_TIMEOUT_SECONDS
+        # Context manager for reset coordination (set from main.py)
+        self._context_manager: DictationContextManager | None = None
+
+    def set_context_manager(self, context_manager: DictationContextManager) -> None:
+        """Set the context manager for context reset coordination.
+
+        Args:
+            context_manager: The DictationContextManager to use for context resets.
+        """
+        self._context_manager = context_manager
 
     def set_transcription_timeout(self, seconds: float) -> None:
         """Set the transcription wait timeout.
@@ -135,7 +152,11 @@ class TranscriptionBufferProcessor(FrameProcessor):
         await super().cleanup()
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
-        """Process frames using state machine pattern."""
+        """Process frames using state machine pattern.
+
+        Transcriptions are passed through to the downstream aggregator during recording
+        states. This processor only tracks whether content arrived for empty detection.
+        """
         await super().process_frame(frame, direction)
 
         if isinstance(frame, VADUserStoppedSpeakingFrame):
@@ -143,10 +164,14 @@ class TranscriptionBufferProcessor(FrameProcessor):
             await self.push_frame(frame, direction)
             return
 
-        # Handle transcription
+        # Handle transcription - track content flag AND pass through to aggregator
         if isinstance(frame, TranscriptionFrame):
             if frame.text:
                 await self._handle_transcription(frame, direction)
+                # Pass transcriptions through to aggregator during recording states
+                match self._state:
+                    case RecordingState() | WaitingForSTTState() | DrainingState():
+                        await self.push_frame(frame, direction)
             return
 
         # Pass through all other frames unchanged
@@ -173,24 +198,29 @@ class TranscriptionBufferProcessor(FrameProcessor):
         # Cancel any pending tasks from previous states
         self._cancel_timeout()
         self._cancel_draining()
+
+        # Reset context for new recording (no conversation history for dictation)
+        if self._context_manager:
+            self._context_manager.reset_context_for_new_recording()
+
         logger.info("Start-recording received, entering RecordingState")
         self._state = RecordingState()
+
+        # Signal user turn start to aggregator
+        await self.push_frame(UserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
 
     async def _handle_stop_recording(self, direction: FrameDirection) -> None:
         """Handle stop-recording based on current state."""
         match self._state:
-            case RecordingState() as state:
-                # Always enter waiting state - we'll handle empty buffers in draining
+            case RecordingState(has_content=has_content):
                 logger.info(
                     f"Stop-recording received, waiting for STT to finalize "
-                    f"(buffer: '{state.buffer.strip()}')"
+                    f"(has_content: {has_content})"
                 )
-                # Signal STT to finalize any pending transcription
-                await self.push_frame(VADUserStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
+                # Signal NVIDIA STT to finalize any pending transcription
+                await self.push_frame(NVidiaSTTFinalizeFrame(), FrameDirection.UPSTREAM)
                 self._state = WaitingForSTTState(
-                    buffer=state.buffer,
-                    user_id=state.user_id,
-                    language=state.language,
+                    has_content=has_content,
                     direction=direction,
                 )
                 self._timeout_task = asyncio.create_task(self._stt_timeout_handler(direction))
@@ -204,18 +234,20 @@ class TranscriptionBufferProcessor(FrameProcessor):
                 logger.warning("Stop-recording received while idle")
                 await self._emit_empty_response(direction)
 
+            case DrainingState():
+                # Already draining - ignore
+                logger.warning("Stop-recording received while draining")
+
     async def _handle_speech_stopped(self, direction: FrameDirection) -> None:
         """Handle speech stopped from VAD based on current state."""
         match self._state:
-            case WaitingForSTTState(buffer=buffer) as state:
+            case WaitingForSTTState(has_content=has_content) as state:
                 # Speech stopped while waiting - enter draining state to catch
                 # late transcriptions that may still be coming from STT
                 self._cancel_timeout()
-                logger.info(f"Speech stopped, entering draining state (buffer: '{buffer.strip()}')")
+                logger.info(f"Speech stopped, entering draining state (has_content: {has_content})")
                 self._state = DrainingState(
-                    buffer=state.buffer,
-                    user_id=state.user_id,
-                    language=state.language,
+                    has_content=has_content,
                     direction=state.direction,
                 )
                 # Start draining task with adaptive timeout
@@ -224,7 +256,7 @@ class TranscriptionBufferProcessor(FrameProcessor):
                     self._draining_task_handler(state.direction)
                 )
             case RecordingState():
-                # Normal speech stopped during recording - just clear the flag
+                # Normal speech stopped during recording - ignore
                 # (speech can start/stop multiple times during a recording session)
                 pass
             case IdleState():
@@ -235,66 +267,51 @@ class TranscriptionBufferProcessor(FrameProcessor):
     async def _handle_transcription(
         self, frame: TranscriptionFrame, direction: FrameDirection
     ) -> None:
-        """Handle incoming transcription based on current state."""
+        """Track that content arrived and signal draining if needed."""
+        _ = direction  # Unused, kept for consistency with other handlers
+
         match self._state:
-            case RecordingState() as state:
-                # Accumulate transcription
-                new_buffer = state.buffer + frame.text
-                self._state = RecordingState(
-                    buffer=new_buffer,
-                    user_id=frame.user_id,
-                    language=frame.language,
-                )
-                logger.debug(f"Buffered transcription: '{frame.text}' (total: '{new_buffer}')")
+            case RecordingState():
+                self._state = RecordingState(has_content=True)
+                logger.debug(f"Transcription received: '{frame.text}'")
 
             case WaitingForSTTState() as state:
-                # Transcription arrived while waiting for speech to stop
-                # Add to buffer and continue waiting
-                new_buffer = state.buffer + frame.text
-                logger.info(f"Transcription arrived while waiting: '{new_buffer.strip()}'")
                 self._state = WaitingForSTTState(
-                    buffer=new_buffer,
-                    user_id=frame.user_id,
-                    language=frame.language,
+                    has_content=True,
                     direction=state.direction,
                 )
+                logger.info(f"Transcription while waiting: '{frame.text}'")
 
             case DrainingState() as state:
-                # Late transcription arrived during draining - add to buffer
-                # and reset the draining timeout
-                new_buffer = state.buffer + frame.text
-                logger.info(f"Late transcription during draining: '{frame.text}'")
                 self._state = DrainingState(
-                    buffer=new_buffer,
-                    user_id=frame.user_id,
-                    language=frame.language,
+                    has_content=True,
                     direction=state.direction,
                 )
-                # Signal the draining task to reset its timeout
+                # Signal draining task to reset timeout
                 self._draining_event.set()
+                logger.info(f"Late transcription during draining: '{frame.text}'")
 
             case IdleState():
-                # Ignore transcriptions when idle (shouldn't happen)
-                logger.warning(f"Received transcription while idle: '{frame.text}'")
+                logger.warning(f"Transcription while idle: '{frame.text}'")
 
     # =========================================================================
     # Timeout Handler
     # =========================================================================
 
     async def _stt_timeout_handler(self, direction: FrameDirection) -> None:
-        """Background task that emits buffer after timeout if speech stopped is not received."""
+        """Background task that signals turn end after timeout if speech stopped is not received."""
         try:
             await asyncio.sleep(self._transcription_wait_timeout)
             # Only act if still in WaitingForSTT state
             match self._state:
-                case WaitingForSTTState(buffer=buffer) as state:
+                case WaitingForSTTState(has_content=has_content) as state:
                     logger.warning(
                         f"Timeout waiting for speech stopped after "
                         f"{self._transcription_wait_timeout}s"
                     )
-                    if buffer.strip():
-                        logger.info(f"Timeout, emitting buffer: '{buffer.strip()}'")
-                        await self._emit_transcription(state, state.direction)
+                    if has_content:
+                        logger.info("Timeout, signaling turn end")
+                        await self._emit_turn_end(state.direction)
                     else:
                         await self._emit_empty_response(direction)
                     self._state = IdleState()
@@ -314,11 +331,12 @@ class TranscriptionBufferProcessor(FrameProcessor):
     # =========================================================================
 
     async def _draining_task_handler(self, direction: FrameDirection) -> None:
-        """Wait for late transcriptions with adaptive timeout, then emit.
+        """Wait for late transcriptions with adaptive timeout, then signal turn end.
 
         Uses an event-based pattern: waits for the transcription timeout, but
         resets the timer each time a transcription arrives (signaled via
-        _draining_event). Emits when the timeout expires with no new transcriptions.
+        _draining_event). Signals turn end when the timeout expires with no
+        new transcriptions.
 
         Uses the user-configurable transcription timeout to handle slow STT providers.
         """
@@ -331,14 +349,14 @@ class TranscriptionBufferProcessor(FrameProcessor):
                 # Transcription arrived - clear event and wait again
                 self._draining_event.clear()
         except TimeoutError:
-            # No transcription for draining timeout - emit now
+            # No transcription for draining timeout - signal turn end now
             match self._state:
-                case DrainingState(buffer=buffer) as state:
-                    if buffer.strip():
-                        logger.info(f"Draining complete, emitting: '{buffer.strip()}'")
-                        await self._emit_transcription(state, state.direction)
+                case DrainingState(has_content=has_content) as state:
+                    if has_content:
+                        logger.info("Draining complete, signaling turn end")
+                        await self._emit_turn_end(state.direction)
                     else:
-                        logger.info("Draining complete with empty buffer, sending empty")
+                        logger.info("Draining complete with no content, sending empty")
                         await self._emit_empty_response(direction)
                     self._state = IdleState()
                 case _:
@@ -357,19 +375,14 @@ class TranscriptionBufferProcessor(FrameProcessor):
     # Output Helpers
     # =========================================================================
 
-    async def _emit_transcription(
-        self,
-        state: RecordingState | WaitingForSTTState | DrainingState,
-        direction: FrameDirection,
-    ) -> None:
-        """Emit the buffered transcription as a consolidated frame."""
-        consolidated_frame = TranscriptionFrame(
-            text=state.buffer.strip(),
-            user_id=state.user_id,
-            timestamp=datetime.now(UTC).isoformat(),
-            language=state.language,
-        )
-        await self.push_frame(consolidated_frame, direction)
+    async def _emit_turn_end(self, direction: FrameDirection) -> None:
+        """Signal end of user turn to the aggregator.
+
+        The aggregator has been collecting transcriptions as they passed through.
+        Now we signal that the user turn has ended, which triggers the aggregator
+        to emit LLMContextFrame with all collected transcriptions.
+        """
+        await self.push_frame(UserStoppedSpeakingFrame(), direction)
 
     async def _emit_empty_response(self, direction: FrameDirection) -> None:
         """Send an empty response message to the client."""

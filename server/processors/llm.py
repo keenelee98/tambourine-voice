@@ -1,20 +1,12 @@
-"""LLM-based text formatting processor for dictation using idiomatic Pipecat patterns."""
+"""LLM prompt definitions and utilities for dictation formatting.
 
-from typing import Any, Final
+This module contains the three-section prompt system:
+- Main prompt: Core dictation formatting rules (always enabled)
+- Advanced prompt: Backtrack corrections and list formatting
+- Dictionary prompt: Personal word mappings and technical terms
+"""
 
-from openai.types.chat import (
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
-)
-from pipecat.frames.frames import (
-    Frame,
-    LLMContextFrame,
-    TranscriptionFrame,
-)
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-
-from utils.logger import logger
+from typing import Final
 
 # Main prompt section - Core rules, punctuation, new lines
 MAIN_PROMPT_DEFAULT: Final[
@@ -157,89 +149,3 @@ def combine_prompt_sections(
         parts.append(dictionary_custom if dictionary_custom else DICTIONARY_PROMPT_DEFAULT)
 
     return "\n\n".join(parts)
-
-
-class TranscriptionToLLMConverter(FrameProcessor):
-    """Converts TranscriptionFrame to LLMContextFrame for LLM formatting.
-
-    This processor receives accumulated transcription text and converts it
-    to an LLM context with the formatting system prompt, triggering the LLM
-    service to generate formatted text.
-    """
-
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize the converter with default prompt sections."""
-        super().__init__(**kwargs)
-        # Store individual prompt sections (main is always enabled)
-        self._main_custom: str | None = None
-        self._advanced_enabled: bool = True
-        self._advanced_custom: str | None = None
-        self._dictionary_enabled: bool = False
-        self._dictionary_custom: str | None = None
-
-    @property
-    def system_prompt(self) -> str:
-        """Get the combined system prompt from all sections."""
-        return combine_prompt_sections(
-            main_custom=self._main_custom,
-            advanced_enabled=self._advanced_enabled,
-            advanced_custom=self._advanced_custom,
-            dictionary_enabled=self._dictionary_enabled,
-            dictionary_custom=self._dictionary_custom,
-        )
-
-    def set_prompt_sections(
-        self,
-        main_custom: str | None = None,
-        advanced_enabled: bool = True,
-        advanced_custom: str | None = None,
-        dictionary_enabled: bool = False,
-        dictionary_custom: str | None = None,
-    ) -> None:
-        """Update the prompt sections.
-
-        The main section is always enabled. For each section, provide a custom
-        prompt to override the default, or None to use the default.
-
-        Args:
-            main_custom: Custom prompt for main section, or None for default.
-            advanced_enabled: Whether the advanced section is enabled.
-            advanced_custom: Custom prompt for advanced section, or None for default.
-            dictionary_enabled: Whether the dictionary section is enabled.
-            dictionary_custom: Custom prompt for dictionary section, or None for default.
-        """
-        self._main_custom = main_custom
-        self._advanced_enabled = advanced_enabled
-        self._advanced_custom = advanced_custom
-        self._dictionary_enabled = dictionary_enabled
-        self._dictionary_custom = dictionary_custom
-        logger.info("Formatting prompt sections updated")
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
-        """Convert transcription frames to LLM context frames.
-
-        Args:
-            frame: The frame to process
-            direction: The direction of frame flow
-        """
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, TranscriptionFrame):
-            text = frame.text
-            if text and text.strip():
-                logger.debug(f"Converting transcription to LLM context: {text[:50]}...")
-
-                # Create universal context with formatting prompt
-                context = LLMContext(
-                    messages=[
-                        ChatCompletionSystemMessageParam(role="system", content=self.system_prompt),
-                        ChatCompletionUserMessageParam(role="user", content=text),
-                    ]
-                )
-
-                # Push context frame to trigger LLM processing
-                await self.push_frame(LLMContextFrame(context=context), direction)
-            return
-
-        # Pass through all other frames unchanged
-        await self.push_frame(frame, direction)

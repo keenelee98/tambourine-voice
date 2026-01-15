@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from pipecat.services.ai_services import STTService
     from pipecat.services.llm_service import LLMService
 
-    from processors.llm import TranscriptionToLLMConverter
-    from processors.transcription_buffer import TranscriptionBufferProcessor
+    from processors.context_manager import DictationContextManager
+    from processors.turn_controller import TurnController
 
 
 class ConfigurationHandler:
@@ -44,8 +44,8 @@ class ConfigurationHandler:
         rtvi_processor: RTVIProcessor,
         stt_switcher: ServiceSwitcher,
         llm_switcher: LLMSwitcher,
-        llm_converter: TranscriptionToLLMConverter,
-        transcription_buffer: TranscriptionBufferProcessor,
+        context_manager: DictationContextManager,
+        turn_controller: TurnController,
         stt_services: dict[STTProviderId, STTService],
         llm_services: dict[LLMProviderId, LLMService],
     ) -> None:
@@ -55,16 +55,16 @@ class ConfigurationHandler:
             rtvi_processor: The RTVIProcessor to send responses through
             stt_switcher: ServiceSwitcher for STT services
             llm_switcher: LLMSwitcher for LLM services
-            llm_converter: TranscriptionToLLMConverter for prompt configuration
-            transcription_buffer: TranscriptionBufferProcessor for timeout configuration
+            context_manager: DictationContextManager for prompt configuration
+            turn_controller: TurnController for timeout configuration
             stt_services: Dictionary mapping STT provider IDs to services
             llm_services: Dictionary mapping LLM provider IDs to services
         """
         self._rtvi = rtvi_processor
         self._stt_switcher = stt_switcher
         self._llm_switcher = llm_switcher
-        self._llm_converter = llm_converter
-        self._transcription_buffer = transcription_buffer
+        self._context_manager = context_manager
+        self._turn_controller = turn_controller
         self._stt_services = stt_services
         self._llm_services = llm_services
 
@@ -156,13 +156,13 @@ class ConfigurationHandler:
             sections: The prompt sections configuration, or None to reset to defaults.
         """
         if not sections:
-            self._llm_converter.set_prompt_sections()
+            self._context_manager.set_prompt_sections()
             logger.info("Reset formatting prompt to default")
             await self._send_config_success("prompt-sections", "default")
             return
 
         try:
-            self._llm_converter.set_prompt_sections(
+            self._context_manager.set_prompt_sections(
                 main_custom=sections.get("main", {}).get("content"),
                 advanced_enabled=sections.get("advanced", {}).get("enabled", True),
                 advanced_custom=sections.get("advanced", {}).get("content"),
@@ -190,7 +190,7 @@ class ConfigurationHandler:
             )
             return
 
-        self._transcription_buffer.set_transcription_timeout(timeout_seconds)
+        self._turn_controller.set_transcription_timeout(timeout_seconds)
         logger.info(f"Set STT timeout to: {timeout_seconds}s")
         await self._send_config_success("stt-timeout", timeout_seconds)
 
