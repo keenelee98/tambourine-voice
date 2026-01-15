@@ -9,7 +9,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use super::{AudioDeviceInfo, MicCapture, MicCaptureError, CHANNELS, SAMPLE_RATE};
+use super::{AudioDeviceInfo, MicCapture, MicCaptureError};
 
 /// Commands sent to the audio capture thread
 enum AudioCommand {
@@ -134,11 +134,22 @@ fn create_stream(
             .ok_or_else(|| MicCaptureError::DeviceNotFound("No default device".into()))?,
     };
 
+    // Use the device's default config - it's guaranteed to work
+    let default_config = device
+        .default_input_config()
+        .map_err(|e| MicCaptureError::StreamCreationFailed(e.to_string()))?;
+
     let config = cpal::StreamConfig {
-        channels: CHANNELS,
-        sample_rate: SAMPLE_RATE,
-        buffer_size: cpal::BufferSize::Fixed(480), // 10ms at 48kHz
+        channels: default_config.channels().min(2), // Use mono or stereo max
+        sample_rate: default_config.sample_rate(),
+        buffer_size: cpal::BufferSize::Default,
     };
+
+    log::info!(
+        "Using device audio config: {}Hz, {} channel(s)",
+        config.sample_rate,
+        config.channels
+    );
 
     let stream = device
         .build_input_stream(

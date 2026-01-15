@@ -10,10 +10,6 @@ mod cpal_impl;
 
 pub use cpal_impl::CpalMicCapture;
 
-/// Audio format used for capture and streaming
-pub const SAMPLE_RATE: u32 = 48000; // Match WebRTC default
-pub const CHANNELS: u16 = 1; // Mono for voice
-
 /// Information about an audio input device
 #[derive(Debug, Clone, Serialize)]
 pub struct AudioDeviceInfo {
