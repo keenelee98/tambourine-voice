@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from pipecat.services.ai_services import STTService
     from pipecat.services.llm_service import LLMService
 
+    from config.settings import Settings
     from processors.context_manager import DictationContextManager
     from processors.turn_controller import TurnController
 
@@ -48,6 +49,7 @@ class ConfigurationHandler:
         turn_controller: TurnController,
         stt_services: dict[STTProviderId, STTService],
         llm_services: dict[LLMProviderId, LLMService],
+        settings: Settings,
     ) -> None:
         """Initialize the configuration handler.
 
@@ -59,6 +61,7 @@ class ConfigurationHandler:
             turn_controller: TurnController for timeout configuration
             stt_services: Dictionary mapping STT provider IDs to services
             llm_services: Dictionary mapping LLM provider IDs to services
+            settings: Application settings for auto provider configuration
         """
         self._rtvi = rtvi_processor
         self._stt_switcher = stt_switcher
@@ -67,6 +70,7 @@ class ConfigurationHandler:
         self._turn_controller = turn_controller
         self._stt_services = stt_services
         self._llm_services = llm_services
+        self._settings = settings
 
     async def handle_client_message(self, msg_type: str, data: dict[str, Any]) -> bool:
         """Handle a client message from RTVIProcessor.
@@ -117,7 +121,7 @@ class ConfigurationHandler:
         """Switch to a different provider (generic for STT/LLM).
 
         Args:
-            provider_value: The provider ID string (e.g., "deepgram", "openai")
+            provider_value: The provider ID string (e.g., "deepgram", "openai", "auto")
             setting_name: The setting name for responses (e.g., "stt-provider")
             provider_enum: The enum class to validate against
             services: Dictionary mapping provider IDs to services
@@ -126,6 +130,23 @@ class ConfigurationHandler:
         if not provider_value:
             await self._send_config_error(setting_name, "Provider value is required")
             return
+
+        # Handle "auto" provider - resolve to configured auto provider or use pipecat default
+        if provider_value == "auto":
+            if setting_name == "stt-provider":
+                auto_provider = self._settings.auto_stt_provider
+            else:
+                auto_provider = self._settings.auto_llm_provider
+
+            if auto_provider is None:
+                # No auto provider configured - log warning and no-op
+                logger.warning(f"No auto provider configured for {setting_name}, no-op")
+                await self._send_config_success(setting_name, "auto")
+                return
+
+            # Resolve "auto" to the configured provider
+            provider_value = auto_provider
+            logger.info(f"Auto mode for {setting_name} resolved to: {auto_provider}")
 
         try:
             provider_id = provider_enum(provider_value)

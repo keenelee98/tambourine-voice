@@ -2,6 +2,7 @@
 
 from typing import Self
 
+from loguru import logger
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -55,6 +56,16 @@ class Settings(BaseSettings):
     )
     openrouter_api_key: str | None = Field(None, description="OpenRouter API key for LLM")
 
+    # Auto provider configuration (resolved when client sends "auto")
+    auto_stt_provider: str | None = Field(
+        default=None,
+        description="Default STT provider for 'auto' mode (e.g., 'deepgram')",
+    )
+    auto_llm_provider: str | None = Field(
+        default=None,
+        description="Default LLM provider for 'auto' mode (e.g., 'cerebras')",
+    )
+
     # Logging
     log_level: str = Field("INFO", description="Logging level")
 
@@ -96,6 +107,51 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"No LLM provider configured. "
                 f"Configure credentials for at least one of: {', '.join(all_llm_names)}"
+            )
+
+        # Validate auto providers have credentials configured
+        from services.provider_registry import LLMProviderId, STTProviderId
+
+        if self.auto_stt_provider is not None:
+            # Validate it's a known provider ID
+            try:
+                stt_provider_id = STTProviderId(self.auto_stt_provider)
+            except ValueError:
+                valid_ids = [p.value for p in STTProviderId]
+                raise ValueError(
+                    f"Invalid AUTO_STT_PROVIDER: '{self.auto_stt_provider}'. "
+                    f"Must be one of: {', '.join(valid_ids)}"
+                ) from None
+            # Validate credentials are available
+            stt_config = STT_PROVIDERS.get(stt_provider_id)
+            if stt_config and not stt_config.credential_mapper.is_available(self):
+                raise ValueError(
+                    f"AUTO_STT_PROVIDER is set to '{self.auto_stt_provider}' but "
+                    f"credentials for {stt_config.display_name} are not configured"
+                )
+            logger.info(
+                f"Auto STT provider: {stt_config.display_name if stt_config else self.auto_stt_provider}"
+            )
+
+        if self.auto_llm_provider is not None:
+            # Validate it's a known provider ID
+            try:
+                llm_provider_id = LLMProviderId(self.auto_llm_provider)
+            except ValueError:
+                valid_ids = [p.value for p in LLMProviderId]
+                raise ValueError(
+                    f"Invalid AUTO_LLM_PROVIDER: '{self.auto_llm_provider}'. "
+                    f"Must be one of: {', '.join(valid_ids)}"
+                ) from None
+            # Validate credentials are available
+            llm_config = LLM_PROVIDERS.get(llm_provider_id)
+            if llm_config and not llm_config.credential_mapper.is_available(self):
+                raise ValueError(
+                    f"AUTO_LLM_PROVIDER is set to '{self.auto_llm_provider}' but "
+                    f"credentials for {llm_config.display_name} are not configured"
+                )
+            logger.info(
+                f"Auto LLM provider: {llm_config.display_name if llm_config else self.auto_llm_provider}"
             )
 
         return self

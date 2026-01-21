@@ -4,6 +4,59 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Store } from "@tauri-apps/plugin-store";
 import ky from "ky";
 
+// =============================================================================
+// Provider ID Constants - Must match server's provider_registry.py
+// =============================================================================
+
+/** STT provider IDs from server/services/provider_registry.py */
+export const STT_PROVIDER_IDS = [
+	"auto",
+	"speechmatics",
+	"assemblyai",
+	"aws",
+	"azure",
+	"cartesia",
+	"deepgram",
+	"google",
+	"groq",
+	"nemotron",
+	"openai",
+	"whisper",
+] as const;
+
+/** LLM provider IDs from server/services/provider_registry.py */
+export const LLM_PROVIDER_IDS = [
+	"auto",
+	"anthropic",
+	"cerebras",
+	"gemini",
+	"groq",
+	"ollama",
+	"openai",
+	"openrouter",
+] as const;
+
+/** Known STT provider IDs that we have type definitions for */
+export type KnownSTTProviderId = (typeof STT_PROVIDER_IDS)[number];
+
+/** Known LLM provider IDs that we have type definitions for */
+export type KnownLLMProviderId = (typeof LLM_PROVIDER_IDS)[number];
+
+/**
+ * Valid STT provider ID - includes known providers plus any string for forward compatibility.
+ * When server adds new providers, old clients can still use them (as unknown strings).
+ * The `(string & {})` trick preserves autocomplete for known values while accepting any string.
+ */
+export type STTProviderId = KnownSTTProviderId | (string & {});
+
+/**
+ * Valid LLM provider ID - includes known providers plus any string for forward compatibility.
+ */
+export type LLMProviderId = KnownLLMProviderId | (string & {});
+
+// Type guards (isKnownSTTProvider, isKnownLLMProvider) can be added here if needed
+// to detect unknown providers from newer servers and show visual indicators in the UI.
+
 export type ConnectionState =
 	| "disconnected"
 	| "connecting"
@@ -70,8 +123,8 @@ export interface AppSettings {
 	selected_mic_id: string | null;
 	sound_enabled: boolean;
 	cleanup_prompt_sections: CleanupPromptSections | null;
-	stt_provider: string | null;
-	llm_provider: string | null;
+	stt_provider: STTProviderId;
+	llm_provider: LLMProviderId;
 	auto_mute_audio: boolean;
 	stt_timeout_seconds: number | null;
 	server_url: string;
@@ -213,11 +266,11 @@ export const tauriAPI = {
 		return invoke("update_cleanup_prompt_sections", { sections });
 	},
 
-	async updateSTTProvider(provider: string | null): Promise<void> {
+	async updateSTTProvider(provider: STTProviderId): Promise<void> {
 		return invoke("update_stt_provider", { provider });
 	},
 
-	async updateLLMProvider(provider: string | null): Promise<void> {
+	async updateLLMProvider(provider: LLMProviderId): Promise<void> {
 		return invoke("update_llm_provider", { provider });
 	},
 

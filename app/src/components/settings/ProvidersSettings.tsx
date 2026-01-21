@@ -94,6 +94,7 @@ export function ProvidersSettings() {
 	);
 	const sttProviderOptions = useMemo(
 		() => [
+			{ group: "", items: [{ value: "auto", label: "Auto" }] },
 			{ group: "Cloud", items: sttCloudProviders },
 			{ group: "Local", items: sttLocalProviders },
 		],
@@ -122,19 +123,22 @@ export function ProvidersSettings() {
 	);
 	const llmProviderOptions = useMemo(
 		() => [
+			{ group: "", items: [{ value: "auto", label: "Auto" }] },
 			{ group: "Cloud", items: llmCloudProviders },
 			{ group: "Local", items: llmLocalProviders },
 		],
 		[llmCloudProviders, llmLocalProviders],
 	);
 
-	// Determine if currently selected provider is local
+	// Determine if currently selected provider is local (only show badge for non-auto providers)
 	const selectedSttProvider = availableProviders?.stt.find(
 		(p) => p.value === settings?.stt_provider,
 	);
 	const selectedLlmProvider = availableProviders?.llm.find(
 		(p) => p.value === settings?.llm_provider,
 	);
+	const isSttProviderAuto = settings?.stt_provider === "auto";
+	const isLlmProviderAuto = settings?.llm_provider === "auto";
 	const isSttProviderLocal = selectedSttProvider?.is_local ?? false;
 	const isLlmProviderLocal = selectedLlmProvider?.is_local ?? false;
 
@@ -156,7 +160,7 @@ export function ProvidersSettings() {
 							<>
 								<Select
 									data={sttProviderOptions}
-									value={settings?.stt_provider ?? null}
+									value={settings?.stt_provider ?? "auto"}
 									onChange={handleSTTProviderChange}
 									placeholder="Select provider"
 									disabled={
@@ -171,7 +175,7 @@ export function ProvidersSettings() {
 										},
 									}}
 								/>
-								{settings?.stt_provider && (
+								{!isSttProviderAuto && settings?.stt_provider && (
 									<Badge
 										size="xs"
 										variant="light"
@@ -196,7 +200,7 @@ export function ProvidersSettings() {
 							<>
 								<Select
 									data={llmProviderOptions}
-									value={settings?.llm_provider ?? null}
+									value={settings?.llm_provider ?? "auto"}
 									onChange={handleLLMProviderChange}
 									placeholder="Select provider"
 									disabled={
@@ -211,7 +215,7 @@ export function ProvidersSettings() {
 										},
 									}}
 								/>
-								{settings?.llm_provider && (
+								{!isLlmProviderAuto && settings?.llm_provider && (
 									<Badge
 										size="xs"
 										variant="light"

@@ -131,8 +131,8 @@ pub fn get_settings(app: AppHandle) -> Result<AppSettings, String> {
         selected_mic_id: get_setting_from_store(&app, "selected_mic_id", None),
         sound_enabled: get_setting_from_store(&app, "sound_enabled", true),
         cleanup_prompt_sections: get_setting_from_store(&app, "cleanup_prompt_sections", None),
-        stt_provider: get_setting_from_store(&app, "stt_provider", None),
-        llm_provider: get_setting_from_store(&app, "llm_provider", None),
+        stt_provider: get_setting_from_store(&app, "stt_provider", "auto".to_string()),
+        llm_provider: get_setting_from_store(&app, "llm_provider", "auto".to_string()),
         auto_mute_audio: get_setting_from_store(&app, "auto_mute_audio", false),
         stt_timeout_seconds: get_setting_from_store(&app, "stt_timeout_seconds", None),
         server_url: get_setting_from_store(&app, "server_url", DEFAULT_SERVER_URL.to_string()),
@@ -240,30 +240,30 @@ pub async fn update_cleanup_prompt_sections(
 /// Update STT provider
 #[cfg(desktop)]
 #[tauri::command]
-pub async fn update_stt_provider(app: AppHandle, provider: Option<String>) -> Result<(), String> {
+pub async fn update_stt_provider(app: AppHandle, provider: String) -> Result<(), String> {
     crate::save_setting_to_store(&app, "stt_provider", &provider)?;
-    log::info!("Updated STT provider: {:?}", provider);
+    log::info!("Updated STT provider: {}", provider);
     Ok(())
 }
 
 #[cfg(not(desktop))]
 #[tauri::command]
-pub async fn update_stt_provider(_app: AppHandle, _provider: Option<String>) -> Result<(), String> {
+pub async fn update_stt_provider(_app: AppHandle, _provider: String) -> Result<(), String> {
     Ok(())
 }
 
 /// Update LLM provider
 #[cfg(desktop)]
 #[tauri::command]
-pub async fn update_llm_provider(app: AppHandle, provider: Option<String>) -> Result<(), String> {
+pub async fn update_llm_provider(app: AppHandle, provider: String) -> Result<(), String> {
     crate::save_setting_to_store(&app, "llm_provider", &provider)?;
-    log::info!("Updated LLM provider: {:?}", provider);
+    log::info!("Updated LLM provider: {}", provider);
     Ok(())
 }
 
 #[cfg(not(desktop))]
 #[tauri::command]
-pub async fn update_llm_provider(_app: AppHandle, _provider: Option<String>) -> Result<(), String> {
+pub async fn update_llm_provider(_app: AppHandle, _provider: String) -> Result<(), String> {
     Ok(())
 }
 

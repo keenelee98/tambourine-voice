@@ -199,6 +199,7 @@ async def run_pipeline(
         turn_controller=turn_controller,
         stt_services=stt_services,
         llm_services=llm_services,
+        settings=services.settings,
     )
 
     # Register event handler for client messages

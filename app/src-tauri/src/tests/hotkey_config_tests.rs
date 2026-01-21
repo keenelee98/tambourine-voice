@@ -189,8 +189,8 @@ fn test_app_settings_default() {
     assert!(settings.sound_enabled);
     assert!(!settings.auto_mute_audio);
     assert!(settings.selected_mic_id.is_none());
-    assert!(settings.stt_provider.is_none());
-    assert!(settings.llm_provider.is_none());
+    assert_eq!(settings.stt_provider, "auto");
+    assert_eq!(settings.llm_provider, "auto");
     assert!(settings.cleanup_prompt_sections.is_none());
     assert!(settings.stt_timeout_seconds.is_none());
     assert_eq!(settings.server_url, "http://127.0.0.1:8765");

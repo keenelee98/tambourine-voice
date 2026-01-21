@@ -7,6 +7,8 @@ import {
 	type ConnectionState,
 	configAPI,
 	type HotkeyConfig,
+	type LLMProviderId,
+	type STTProviderId,
 	tauriAPI,
 	validateHotkeyNotDuplicate,
 } from "./tauri";
@@ -322,7 +324,7 @@ export function useAvailableProviders() {
 export function useUpdateSTTProvider() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (provider: string | null) =>
+		mutationFn: (provider: STTProviderId) =>
 			tauriAPI.updateSTTProvider(provider),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["settings"] });
@@ -333,7 +335,7 @@ export function useUpdateSTTProvider() {
 export function useUpdateLLMProvider() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (provider: string | null) =>
+		mutationFn: (provider: LLMProviderId) =>
 			tauriAPI.updateLLMProvider(provider),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["settings"] });
